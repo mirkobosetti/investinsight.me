@@ -41,13 +41,13 @@ export const calculateInvestmentProjections = (
   config: InvestmentConfig,
   startYear: number = 2025
 ): InvestmentMonth[] => {
-  const { monthlyInvestment, annualROI, yearsToSimulate } = config;
+  const { initialBalance, monthlyInvestment, annualROI, yearsToSimulate } = config;
   const monthlyROI = annualROI / 12 / 100;
   const totalMonths = yearsToSimulate * 12;
 
   const projections: InvestmentMonth[] = [];
-  let portfolioValue = 0;
-  let totalInvested = 0;
+  let portfolioValue = initialBalance;
+  let totalInvested = initialBalance;
 
   for (let i = 0; i < totalMonths; i++) {
     // Add monthly investment

@@ -9,6 +9,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<TabType>('cashflow');
   const [cashFlowData, setCashFlowData] = useState<CashFlowData>(generateMockCashFlowData());
   const [investmentConfig, setInvestmentConfig] = useState<InvestmentConfig>({
+    initialBalance: 0,
     monthlyInvestment: 200,
     annualROI: 7,
     yearsToSimulate: 30,

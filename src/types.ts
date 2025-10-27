@@ -22,6 +22,7 @@ export interface CashFlowData {
 
 // Tab 2 - Investment Types
 export interface InvestmentConfig {
+  initialBalance: number;
   monthlyInvestment: number;
   annualROI: number;
   yearsToSimulate: number;

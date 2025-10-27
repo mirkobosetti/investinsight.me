@@ -46,7 +46,20 @@ export const InvestmentsTab = ({ config, onUpdateConfig }: InvestmentsTabProps) 
       {/* Configuration Form */}
       <div className="bg-gray-800 p-6 rounded-lg">
         <h2 className="text-2xl font-bold mb-4">Configurazione Investimenti</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              💰 Saldo Iniziale (€)
+            </label>
+            <input
+              type="number"
+              value={localConfig.initialBalance}
+              onChange={(e) =>
+                setLocalConfig({ ...localConfig, initialBalance: parseFloat(e.target.value) || 0 })
+              }
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
           <div>
             <label className="block text-sm font-medium mb-2">
               💵 Investimento Mensile (€)
