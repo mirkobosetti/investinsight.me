@@ -23,6 +23,15 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
+      {/* Warning Banner */}
+      <div className="bg-amber-600 text-white">
+        <div className="container mx-auto px-4 py-3 text-center">
+          <p className="font-medium">
+            ⚠️ Attenzione: I dati visualizzati sono randomici e utilizzati solo a scopo dimostrativo
+          </p>
+        </div>
+      </div>
+
       {/* Header */}
       <header className="bg-gray-800 border-b border-gray-700">
         <div className="container mx-auto px-4 py-4">
