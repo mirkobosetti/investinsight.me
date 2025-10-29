@@ -48,13 +48,4 @@ export interface InvestmentData {
   projections: InvestmentMonth[];
 }
 
-// Tab 3 - Global Simulation Types
-export interface GlobalMonth {
-  month: string;
-  year: number;
-  liquidCapital: number;
-  investedCapital: number;
-  totalWealth: number;
-}
-
-export type TabType = 'cashflow' | 'investments' | 'global';
+export type TabType = 'cashflow' | 'investments' | 'categories';

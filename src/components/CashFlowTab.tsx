@@ -12,7 +12,8 @@ import {
   ResponsiveContainer
 } from 'recharts'
 import type { CashFlowData, CashFlowConfig, MonthData } from '../types'
-import { formatCurrency, CATEGORY_COLORS, generateId, calculateCumulativeCapital, generateMockCashFlowData } from '../utils'
+import { formatCurrency, generateId, calculateCumulativeCapital, generateMockCashFlowData } from '../utils'
+import { useCategoryStore } from '../stores/categoryStore'
 
 interface CashFlowTabProps {
   config: CashFlowConfig
@@ -22,6 +23,9 @@ interface CashFlowTabProps {
 }
 
 export const CashFlowTab = ({ config, data, onUpdateConfig, onUpdateData }: CashFlowTabProps) => {
+  const categories = useCategoryStore(state => state.categories)
+  const getCategoryByName = useCategoryStore(state => state.getCategoryByName)
+
   const [localConfig, setLocalConfig] = useState(config)
   const [selectedMonthIndex, setSelectedMonthIndex] = useState(0)
   const [newExpenseCategory, setNewExpenseCategory] = useState('')
@@ -47,10 +51,13 @@ export const CashFlowTab = ({ config, data, onUpdateConfig, onUpdateData }: Cash
     }
   })
 
-  // Get all unique categories
-  const allCategories = Array.from(
+  // Get all unique categories from the data
+  const allCategoriesInData = Array.from(
     new Set(data.months.flatMap((m) => m.expenses.map((e) => e.category)))
   )
+
+  // Map them to their colors from the store
+  const categoryColorMap = new Map(categories.map(cat => [cat.name, cat.color]))
 
   const handleUpdateConfig = () => {
     onUpdateConfig(localConfig)
@@ -66,8 +73,14 @@ export const CashFlowTab = ({ config, data, onUpdateConfig, onUpdateData }: Cash
     const amount = parseFloat(newExpenseAmount)
     if (isNaN(amount) || amount <= 0) return
 
+    // Get category from store to use its color
+    const category = getCategoryByName(newExpenseCategory)
+    if (!category) {
+      alert('Categoria non trovata. Vai al tab Categorie per crearla.')
+      return
+    }
+
     const updatedMonths = [...data.months]
-    const colorIndex = updatedMonths[selectedMonthIndex].expenses.length % CATEGORY_COLORS.length
 
     updatedMonths[selectedMonthIndex] = {
       ...updatedMonths[selectedMonthIndex],
@@ -75,9 +88,9 @@ export const CashFlowTab = ({ config, data, onUpdateConfig, onUpdateData }: Cash
         ...updatedMonths[selectedMonthIndex].expenses,
         {
           id: generateId(),
-          category: newExpenseCategory,
+          category: category.name,
           amount,
-          color: CATEGORY_COLORS[colorIndex]
+          color: category.color
         }
       ]
     }
@@ -254,15 +267,15 @@ export const CashFlowTab = ({ config, data, onUpdateConfig, onUpdateData }: Cash
             />
 
             {/* Stacked expenses bars */}
-            {allCategories.map((category, index) => {
-              const color = CATEGORY_COLORS[index % CATEGORY_COLORS.length]
+            {allCategoriesInData.map((categoryName) => {
+              const color = categoryColorMap.get(categoryName) || '#6b7280'
               return (
                 <Bar
-                  key={category}
-                  dataKey={category}
+                  key={categoryName}
+                  dataKey={categoryName}
                   stackId="expenses"
                   fill={color}
-                  name={category}
+                  name={categoryName}
                 />
               )
             })}
@@ -409,13 +422,18 @@ export const CashFlowTab = ({ config, data, onUpdateConfig, onUpdateData }: Cash
         <div>
           <h4 className="text-lg font-semibold mb-3">Aggiungi Spesa</h4>
           <div className="flex gap-4">
-            <input
-              type="text"
-              placeholder="Categoria (es. Palestra)"
+            <select
               value={newExpenseCategory}
               onChange={(e) => setNewExpenseCategory(e.target.value)}
               className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            >
+              <option value="">Seleziona una categoria...</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.name}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
             <input
               type="number"
               placeholder="Importo (€)"
@@ -425,11 +443,15 @@ export const CashFlowTab = ({ config, data, onUpdateConfig, onUpdateData }: Cash
             />
             <button
               onClick={handleAddExpense}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+              disabled={!newExpenseCategory || !newExpenseAmount}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors"
             >
               Aggiungi
             </button>
           </div>
+          <p className="text-xs text-gray-400 mt-2">
+            Non trovi la categoria? Vai al tab <span className="text-blue-400 font-semibold">Categorie</span> per crearne una nuova.
+          </p>
         </div>
       </div>
     </div>

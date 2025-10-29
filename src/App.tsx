@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { CashFlowTab } from './components/CashFlowTab';
 import { InvestmentsTab } from './components/InvestmentsTab';
-import { GlobalTab } from './components/GlobalTab';
+import { CategoriesTab } from './components/CategoriesTab';
 import type { TabType, CashFlowData, CashFlowConfig, InvestmentConfig } from './types';
 import { generateMockCashFlowData } from './utils';
 
@@ -26,7 +26,7 @@ function App() {
   const tabs: { id: TabType; label: string; icon: string }[] = [
     { id: 'cashflow', label: 'Cash Flow', icon: '💰' },
     { id: 'investments', label: 'Investimenti', icon: '📈' },
-    { id: 'global', label: 'Simulazione Globale', icon: '🌍' },
+    { id: 'categories', label: 'Categorie', icon: '📂' },
   ];
 
   return (
@@ -78,9 +78,7 @@ function App() {
         {activeTab === 'investments' && (
           <InvestmentsTab config={investmentConfig} onUpdateConfig={setInvestmentConfig} />
         )}
-        {activeTab === 'global' && (
-          <GlobalTab cashFlowData={cashFlowData} investmentConfig={investmentConfig} />
-        )}
+        {activeTab === 'categories' && <CategoriesTab />}
       </main>
 
       {/* Footer */}
