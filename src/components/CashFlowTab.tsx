@@ -11,15 +11,18 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts'
-import type { CashFlowData, MonthData } from '../types'
-import { formatCurrency, CATEGORY_COLORS, generateId, calculateCumulativeCapital } from '../utils'
+import type { CashFlowData, CashFlowConfig, MonthData } from '../types'
+import { formatCurrency, CATEGORY_COLORS, generateId, calculateCumulativeCapital, generateMockCashFlowData } from '../utils'
 
 interface CashFlowTabProps {
+  config: CashFlowConfig
   data: CashFlowData
+  onUpdateConfig: (config: CashFlowConfig) => void
   onUpdateData: (data: CashFlowData) => void
 }
 
-export const CashFlowTab = ({ data, onUpdateData }: CashFlowTabProps) => {
+export const CashFlowTab = ({ config, data, onUpdateConfig, onUpdateData }: CashFlowTabProps) => {
+  const [localConfig, setLocalConfig] = useState(config)
   const [selectedMonthIndex, setSelectedMonthIndex] = useState(0)
   const [newExpenseCategory, setNewExpenseCategory] = useState('')
   const [newExpenseAmount, setNewExpenseAmount] = useState('')
@@ -48,6 +51,14 @@ export const CashFlowTab = ({ data, onUpdateData }: CashFlowTabProps) => {
   const allCategories = Array.from(
     new Set(data.months.flatMap((m) => m.expenses.map((e) => e.category)))
   )
+
+  const handleUpdateConfig = () => {
+    onUpdateConfig(localConfig)
+    // Regenerate data with new config
+    const newData = generateMockCashFlowData(localConfig)
+    onUpdateData(newData)
+    setSelectedMonthIndex(0) // Reset to first month
+  }
 
   const handleAddExpense = () => {
     if (!newExpenseCategory || !newExpenseAmount) return
@@ -152,6 +163,72 @@ export const CashFlowTab = ({ data, onUpdateData }: CashFlowTabProps) => {
 
   return (
     <div className="space-y-6">
+      {/* Configuration Form */}
+      <div className="bg-gray-800 p-6 rounded-lg">
+        <h2 className="text-2xl font-bold mb-4">Configurazione Cash Flow</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              💰 Capitale Iniziale (€)
+            </label>
+            <input
+              type="number"
+              value={localConfig.initialCapital}
+              onChange={(e) =>
+                setLocalConfig({ ...localConfig, initialCapital: parseFloat(e.target.value) || 0 })
+              }
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              💵 Stipendio Netto Base (€)
+            </label>
+            <input
+              type="number"
+              value={localConfig.baseNetSalary}
+              onChange={(e) =>
+                setLocalConfig({ ...localConfig, baseNetSalary: parseFloat(e.target.value) || 0 })
+              }
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              📈 Stipendio Lordo Base (€)
+            </label>
+            <input
+              type="number"
+              value={localConfig.baseGrossSalary}
+              onChange={(e) =>
+                setLocalConfig({ ...localConfig, baseGrossSalary: parseFloat(e.target.value) || 0 })
+              }
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">📅 Mesi da Generare</label>
+            <input
+              type="number"
+              value={localConfig.monthsToGenerate}
+              onChange={(e) =>
+                setLocalConfig({ ...localConfig, monthsToGenerate: parseInt(e.target.value) || 1 })
+              }
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <div className="text-xs text-gray-400 mt-1">
+              {localConfig.monthsToGenerate} {localConfig.monthsToGenerate === 1 ? 'mese' : 'mesi'}
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={handleUpdateConfig}
+          className="mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+        >
+          Genera Nuovi Dati
+        </button>
+      </div>
+
       {/* Chart */}
       <div className="bg-gray-800 p-6 rounded-lg">
         <h2 className="text-2xl font-bold mb-4">Andamento Capitale</h2>

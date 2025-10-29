@@ -15,6 +15,13 @@ export interface MonthData {
   cumulativeCapital: number;
 }
 
+export interface CashFlowConfig {
+  initialCapital: number;
+  baseNetSalary: number;
+  baseGrossSalary: number;
+  monthsToGenerate: number;
+}
+
 export interface CashFlowData {
   initialCapital: number;
   months: MonthData[];

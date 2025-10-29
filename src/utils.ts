@@ -1,4 +1,4 @@
-import type { CashFlowData, InvestmentConfig, InvestmentMonth, MonthData, Expense } from './types';
+import type { CashFlowData, CashFlowConfig, InvestmentConfig, InvestmentMonth, MonthData, Expense } from './types';
 
 // Predefined colors for expense categories
 export const CATEGORY_COLORS = [
@@ -73,13 +73,11 @@ export const calculateInvestmentProjections = (
 };
 
 // Generate mock cash flow data with realistic monthly variations
-export const generateMockCashFlowData = (): CashFlowData => {
-  const initialCapital = 8500;
+export const generateMockCashFlowData = (config: CashFlowConfig): CashFlowData => {
+  const { initialCapital, baseNetSalary, baseGrossSalary, monthsToGenerate } = config;
   const currentYear = 2025;
-  const baseNetSalary = 2400;
-  const baseGrossSalary = 3300;
 
-  const months: MonthData[] = Array.from({ length: 12 }, (_, i) => {
+  const months: MonthData[] = Array.from({ length: monthsToGenerate }, (_, i) => {
     // Salary variations (13th month in December, bonus in June)
     let netSalary = baseNetSalary;
     let grossSalary = baseGrossSalary;
