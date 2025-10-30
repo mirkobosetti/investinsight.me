@@ -7,9 +7,12 @@ import { ProfilePage } from './pages/ProfilePage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
+  // Set basename based on environment
+  const basename = import.meta.env.MODE === 'production' ? '/investinsight.me' : '';
+
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={basename}>
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Dashboard />} />
