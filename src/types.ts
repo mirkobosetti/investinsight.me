@@ -7,19 +7,13 @@ export interface Expense {
 }
 
 export interface MonthData {
-  month: string;
+  id: string;
+  month: number; // 0-11 (0 = January, 11 = December)
   year: number;
   netSalary: number;
   grossSalary: number;
   expenses: Expense[];
   cumulativeCapital: number;
-}
-
-export interface CashFlowConfig {
-  initialCapital: number;
-  baseNetSalary: number;
-  baseGrossSalary: number;
-  monthsToGenerate: number;
 }
 
 export interface CashFlowData {

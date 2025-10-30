@@ -11,30 +11,38 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts'
-import type { CashFlowData, CashFlowConfig, MonthData } from '../types'
-import { formatCurrency, generateId, calculateCumulativeCapital, generateMockCashFlowData } from '../utils'
+import type { CashFlowData, MonthData } from '../types'
+import { formatCurrency, generateId, calculateCumulativeCapital, sortMonthsChronologically, formatMonthDisplay, getFullMonthName } from '../utils'
 import { useCategoryStore } from '../stores/categoryStore'
 
 interface CashFlowTabProps {
-  config: CashFlowConfig
   data: CashFlowData
-  onUpdateConfig: (config: CashFlowConfig) => void
   onUpdateData: (data: CashFlowData) => void
 }
 
-export const CashFlowTab = ({ config, data, onUpdateConfig, onUpdateData }: CashFlowTabProps) => {
+export const CashFlowTab = ({ data, onUpdateData }: CashFlowTabProps) => {
   const categories = useCategoryStore(state => state.categories)
   const getCategoryByName = useCategoryStore(state => state.getCategoryByName)
 
-  const [localConfig, setLocalConfig] = useState(config)
-  const [selectedMonthIndex, setSelectedMonthIndex] = useState(0)
+  const [selectedMonthId, setSelectedMonthId] = useState<string | null>(
+    data.months.length > 0 ? data.months[0].id : null
+  )
   const [newExpenseCategory, setNewExpenseCategory] = useState('')
   const [newExpenseAmount, setNewExpenseAmount] = useState('')
 
-  const selectedMonth = data.months[selectedMonthIndex]
+  // New month form
+  const [newMonthYear, setNewMonthYear] = useState(new Date().getFullYear())
+  const [newMonthMonth, setNewMonthMonth] = useState(new Date().getMonth())
+  const [newMonthNetSalary, setNewMonthNetSalary] = useState(0)
+  const [newMonthGrossSalary, setNewMonthGrossSalary] = useState(0)
 
-  // Prepare chart data
-  const chartData = data.months.map((month) => {
+  // Sort months chronologically for display
+  const sortedMonths = sortMonthsChronologically(data.months)
+  const selectedMonth = sortedMonths.find(m => m.id === selectedMonthId) || sortedMonths[0]
+  const selectedMonthIndex = sortedMonths.findIndex(m => m.id === selectedMonthId)
+
+  // Prepare chart data (use sorted months)
+  const chartData = sortedMonths.map((month) => {
     const totalExpenses = month.expenses.reduce((sum, exp) => sum + exp.amount, 0)
     const expensesByCategory = month.expenses.reduce((acc, exp) => {
       acc[exp.category] = exp.amount
@@ -42,7 +50,7 @@ export const CashFlowTab = ({ config, data, onUpdateConfig, onUpdateData }: Cash
     }, {} as Record<string, number>)
 
     return {
-      name: `${month.month} ${month.year}`,
+      name: formatMonthDisplay(month.month, month.year),
       ...expensesByCategory,
       netSalary: month.netSalary,
       grossSalary: month.grossSalary,
@@ -59,16 +67,41 @@ export const CashFlowTab = ({ config, data, onUpdateConfig, onUpdateData }: Cash
   // Map them to their colors from the store
   const categoryColorMap = new Map(categories.map(cat => [cat.name, cat.color]))
 
-  const handleUpdateConfig = () => {
-    onUpdateConfig(localConfig)
-    // Regenerate data with new config
-    const newData = generateMockCashFlowData(localConfig)
-    onUpdateData(newData)
-    setSelectedMonthIndex(0) // Reset to first month
+  const handleAddMonth = () => {
+    // Check if month already exists
+    const monthExists = data.months.some(
+      m => m.month === newMonthMonth && m.year === newMonthYear
+    )
+
+    if (monthExists) {
+      alert(`Il mese ${getFullMonthName(newMonthMonth)} ${newMonthYear} esiste già!`)
+      return
+    }
+
+    const newMonth: MonthData = {
+      id: generateId(),
+      month: newMonthMonth,
+      year: newMonthYear,
+      netSalary: newMonthNetSalary,
+      grossSalary: newMonthGrossSalary,
+      expenses: [],
+      cumulativeCapital: 0
+    }
+
+    const updatedMonths = [...data.months, newMonth]
+    const recalculated = calculateCumulativeCapital(updatedMonths, data.initialCapital)
+    onUpdateData({ ...data, months: recalculated })
+
+    // Select the newly added month
+    setSelectedMonthId(newMonth.id)
+
+    // Reset form
+    setNewMonthNetSalary(0)
+    setNewMonthGrossSalary(0)
   }
 
   const handleAddExpense = () => {
-    if (!newExpenseCategory || !newExpenseAmount) return
+    if (!selectedMonth || !newExpenseCategory || !newExpenseAmount) return
 
     const amount = parseFloat(newExpenseAmount)
     if (isNaN(amount) || amount <= 0) return
@@ -80,20 +113,23 @@ export const CashFlowTab = ({ config, data, onUpdateConfig, onUpdateData }: Cash
       return
     }
 
-    const updatedMonths = [...data.months]
-
-    updatedMonths[selectedMonthIndex] = {
-      ...updatedMonths[selectedMonthIndex],
-      expenses: [
-        ...updatedMonths[selectedMonthIndex].expenses,
-        {
-          id: generateId(),
-          category: category.name,
-          amount,
-          color: category.color
+    const updatedMonths = data.months.map(month => {
+      if (month.id === selectedMonth.id) {
+        return {
+          ...month,
+          expenses: [
+            ...month.expenses,
+            {
+              id: generateId(),
+              category: category.name,
+              amount,
+              color: category.color
+            }
+          ]
         }
-      ]
-    }
+      }
+      return month
+    })
 
     const recalculated = calculateCumulativeCapital(updatedMonths, data.initialCapital)
     onUpdateData({ ...data, months: recalculated })
@@ -103,143 +139,137 @@ export const CashFlowTab = ({ config, data, onUpdateConfig, onUpdateData }: Cash
   }
 
   const handleRemoveExpense = (expenseId: string) => {
-    const updatedMonths = [...data.months]
-    updatedMonths[selectedMonthIndex] = {
-      ...updatedMonths[selectedMonthIndex],
-      expenses: updatedMonths[selectedMonthIndex].expenses.filter((e) => e.id !== expenseId)
-    }
+    if (!selectedMonth) return
+
+    const updatedMonths = data.months.map(month => {
+      if (month.id === selectedMonth.id) {
+        return {
+          ...month,
+          expenses: month.expenses.filter((e) => e.id !== expenseId)
+        }
+      }
+      return month
+    })
 
     const recalculated = calculateCumulativeCapital(updatedMonths, data.initialCapital)
     onUpdateData({ ...data, months: recalculated })
   }
 
   const handleUpdateExpense = (expenseId: string, amount: number) => {
-    const updatedMonths = [...data.months]
-    const expenseIndex = updatedMonths[selectedMonthIndex].expenses.findIndex(
-      (e) => e.id === expenseId
-    )
+    if (!selectedMonth) return
 
-    if (expenseIndex !== -1) {
-      updatedMonths[selectedMonthIndex].expenses[expenseIndex].amount = amount
-      const recalculated = calculateCumulativeCapital(updatedMonths, data.initialCapital)
-      onUpdateData({ ...data, months: recalculated })
-    }
-  }
-
-  const handleUpdateSalary = (type: 'net' | 'gross', value: number) => {
-    const updatedMonths = [...data.months]
-    if (type === 'net') {
-      updatedMonths[selectedMonthIndex].netSalary = value
-    } else {
-      updatedMonths[selectedMonthIndex].grossSalary = value
-    }
+    const updatedMonths = data.months.map(month => {
+      if (month.id === selectedMonth.id) {
+        return {
+          ...month,
+          expenses: month.expenses.map(exp =>
+            exp.id === expenseId ? { ...exp, amount } : exp
+          )
+        }
+      }
+      return month
+    })
 
     const recalculated = calculateCumulativeCapital(updatedMonths, data.initialCapital)
     onUpdateData({ ...data, months: recalculated })
   }
 
-  const handleAddMonth = () => {
-    const lastMonth = data.months[data.months.length - 1]
-    const newMonthIndex = data.months.length % 12
-    const newYear = lastMonth.year + Math.floor(data.months.length / 12)
+  const handleUpdateSalary = (type: 'net' | 'gross', value: number) => {
+    if (!selectedMonth) return
 
-    const newMonth: MonthData = {
-      month: ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'][
-        newMonthIndex
-      ],
-      year: newYear,
-      netSalary: lastMonth.netSalary,
-      grossSalary: lastMonth.grossSalary,
-      expenses: lastMonth.expenses.map((exp) => ({ ...exp, id: generateId() })),
-      cumulativeCapital: 0
-    }
+    const updatedMonths = data.months.map(month => {
+      if (month.id === selectedMonth.id) {
+        return {
+          ...month,
+          netSalary: type === 'net' ? value : month.netSalary,
+          grossSalary: type === 'gross' ? value : month.grossSalary
+        }
+      }
+      return month
+    })
 
-    const updatedMonths = [...data.months, newMonth]
     const recalculated = calculateCumulativeCapital(updatedMonths, data.initialCapital)
     onUpdateData({ ...data, months: recalculated })
   }
 
   const handleRemoveMonth = () => {
-    if (data.months.length <= 1) return
+    if (!selectedMonth || data.months.length === 0) return
 
-    const updatedMonths = data.months.slice(0, -1)
-    const recalculated = calculateCumulativeCapital(updatedMonths, data.initialCapital)
-    onUpdateData({ ...data, months: recalculated })
+    if (confirm(`Sei sicuro di voler eliminare ${formatMonthDisplay(selectedMonth.month, selectedMonth.year)}?`)) {
+      const updatedMonths = data.months.filter(m => m.id !== selectedMonth.id)
+      const recalculated = calculateCumulativeCapital(updatedMonths, data.initialCapital)
+      onUpdateData({ ...data, months: recalculated })
 
-    if (selectedMonthIndex >= updatedMonths.length) {
-      setSelectedMonthIndex(updatedMonths.length - 1)
+      // Select first month or null if no months left
+      if (updatedMonths.length > 0) {
+        setSelectedMonthId(updatedMonths[0].id)
+      } else {
+        setSelectedMonthId(null)
+      }
     }
   }
 
-  const totalExpenses = selectedMonth.expenses.reduce((sum, exp) => sum + exp.amount, 0)
-  const monthlyBalance = selectedMonth.netSalary - totalExpenses
+  const totalExpenses = selectedMonth?.expenses.reduce((sum, exp) => sum + exp.amount, 0) || 0
+  const monthlyBalance = (selectedMonth?.netSalary || 0) - totalExpenses
 
   return (
     <div className="space-y-6">
-      {/* Configuration Form */}
+      {/* Add New Month Form */}
       <div className="bg-gray-800 p-6 rounded-lg">
-        <h2 className="text-2xl font-bold mb-4">Configurazione Cash Flow</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <h2 className="text-2xl font-bold mb-4">Aggiungi Nuovo Mese</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-2">
-              💰 Capitale Iniziale (€)
-            </label>
+            <label className="block text-sm font-medium mb-2">Mese</label>
+            <select
+              value={newMonthMonth}
+              onChange={(e) => setNewMonthMonth(parseInt(e.target.value))}
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {Array.from({ length: 12 }, (_, i) => (
+                <option key={i} value={i}>
+                  {getFullMonthName(i)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Anno</label>
             <input
               type="number"
-              value={localConfig.initialCapital}
-              onChange={(e) =>
-                setLocalConfig({ ...localConfig, initialCapital: parseFloat(e.target.value) || 0 })
-              }
+              value={newMonthYear}
+              onChange={(e) => setNewMonthYear(parseInt(e.target.value) || new Date().getFullYear())}
+              min="1900"
+              max="2100"
               className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">
-              💵 Stipendio Netto Base (€)
-            </label>
+            <label className="block text-sm font-medium mb-2">Stipendio Netto (€)</label>
             <input
               type="number"
-              value={localConfig.baseNetSalary}
-              onChange={(e) =>
-                setLocalConfig({ ...localConfig, baseNetSalary: parseFloat(e.target.value) || 0 })
-              }
+              value={newMonthNetSalary}
+              onChange={(e) => setNewMonthNetSalary(parseFloat(e.target.value) || 0)}
               className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">
-              📈 Stipendio Lordo Base (€)
-            </label>
+            <label className="block text-sm font-medium mb-2">Stipendio Lordo (€)</label>
             <input
               type="number"
-              value={localConfig.baseGrossSalary}
-              onChange={(e) =>
-                setLocalConfig({ ...localConfig, baseGrossSalary: parseFloat(e.target.value) || 0 })
-              }
+              value={newMonthGrossSalary}
+              onChange={(e) => setNewMonthGrossSalary(parseFloat(e.target.value) || 0)}
               className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">📅 Mesi da Generare</label>
-            <input
-              type="number"
-              value={localConfig.monthsToGenerate}
-              onChange={(e) =>
-                setLocalConfig({ ...localConfig, monthsToGenerate: parseInt(e.target.value) || 1 })
-              }
-              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <div className="text-xs text-gray-400 mt-1">
-              {localConfig.monthsToGenerate} {localConfig.monthsToGenerate === 1 ? 'mese' : 'mesi'}
-            </div>
+          <div className="flex items-end">
+            <button
+              onClick={handleAddMonth}
+              className="w-full px-6 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+            >
+              Aggiungi Mese
+            </button>
           </div>
         </div>
-        <button
-          onClick={handleUpdateConfig}
-          className="mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-        >
-          Genera Nuovi Dati
-        </button>
       </div>
 
       {/* Chart */}
@@ -302,72 +332,86 @@ export const CashFlowTab = ({ config, data, onUpdateConfig, onUpdateData }: Cash
       </div>
 
       {/* Month Selector */}
-      <div className="flex items-center justify-between gap-4 bg-gray-800 p-4 rounded-lg">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setSelectedMonthIndex(Math.max(0, selectedMonthIndex - 1))}
-            disabled={selectedMonthIndex === 0}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors"
-          >
-            ← Prec
-          </button>
-          <div className="text-xl font-bold">
-            {selectedMonth.month} {selectedMonth.year}
+      {data.months.length > 0 ? (
+        <div className="flex items-center justify-between gap-4 bg-gray-800 p-4 rounded-lg">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => {
+                const prevIndex = Math.max(0, selectedMonthIndex - 1)
+                setSelectedMonthId(sortedMonths[prevIndex].id)
+              }}
+              disabled={selectedMonthIndex === 0}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors"
+            >
+              ← Prec
+            </button>
+            <select
+              value={selectedMonthId || ''}
+              onChange={(e) => setSelectedMonthId(e.target.value)}
+              className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xl font-bold"
+            >
+              {sortedMonths.map((month) => (
+                <option key={month.id} value={month.id}>
+                  {formatMonthDisplay(month.month, month.year)}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => {
+                const nextIndex = Math.min(sortedMonths.length - 1, selectedMonthIndex + 1)
+                setSelectedMonthId(sortedMonths[nextIndex].id)
+              }}
+              disabled={selectedMonthIndex === sortedMonths.length - 1}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors"
+            >
+              Succ →
+            </button>
           </div>
-          <button
-            onClick={() =>
-              setSelectedMonthIndex(Math.min(data.months.length - 1, selectedMonthIndex + 1))
-            }
-            disabled={selectedMonthIndex === data.months.length - 1}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors"
-          >
-            Succ →
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleRemoveMonth}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+            >
+              Elimina Mese
+            </button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handleAddMonth}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-          >
-            + Aggiungi Mese
-          </button>
-          <button
-            onClick={handleRemoveMonth}
-            disabled={data.months.length <= 1}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors"
-          >
-            - Rimuovi Mese
-          </button>
+      ) : (
+        <div className="bg-gray-800 p-8 rounded-lg text-center">
+          <p className="text-gray-400 mb-4">Nessun mese presente. Aggiungi il tuo primo mese sopra!</p>
         </div>
-      </div>
+      )}
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-gray-800 p-4 rounded-lg">
-          <div className="text-sm text-gray-400">Spese Totali Mese</div>
-          <div className="text-2xl font-bold text-red-500">{formatCurrency(totalExpenses)}</div>
-        </div>
-        <div className="bg-gray-800 p-4 rounded-lg">
-          <div className="text-sm text-gray-400">Bilancio Mensile</div>
-          <div
-            className={`text-2xl font-bold ${
-              monthlyBalance >= 0 ? 'text-green-500' : 'text-red-500'
-            }`}
-          >
-            {formatCurrency(monthlyBalance)}
+      {/* Summary Cards and Edit Form - Only show if there are months */}
+      {selectedMonth && (
+        <>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-gray-800 p-4 rounded-lg">
+              <div className="text-sm text-gray-400">Spese Totali Mese</div>
+              <div className="text-2xl font-bold text-red-500">{formatCurrency(totalExpenses)}</div>
+            </div>
+            <div className="bg-gray-800 p-4 rounded-lg">
+              <div className="text-sm text-gray-400">Bilancio Mensile</div>
+              <div
+                className={`text-2xl font-bold ${
+                  monthlyBalance >= 0 ? 'text-green-500' : 'text-red-500'
+                }`}
+              >
+                {formatCurrency(monthlyBalance)}
+              </div>
+            </div>
+            <div className="bg-gray-800 p-4 rounded-lg">
+              <div className="text-sm text-gray-400">Capitale Cumulativo</div>
+              <div className="text-2xl font-bold text-green-500">
+                {formatCurrency(selectedMonth.cumulativeCapital)}
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="bg-gray-800 p-4 rounded-lg">
-          <div className="text-sm text-gray-400">Capitale Cumulativo</div>
-          <div className="text-2xl font-bold text-green-500">
-            {formatCurrency(selectedMonth.cumulativeCapital)}
-          </div>
-        </div>
-      </div>
 
-      {/* Edit Form */}
-      <div className="bg-gray-800 p-6 rounded-lg space-y-6">
-        <h3 className="text-xl font-bold">Modifica Dati Mese</h3>
+          {/* Edit Form */}
+          <div className="bg-gray-800 p-6 rounded-lg space-y-6">
+            <h3 className="text-xl font-bold">Modifica Dati Mese</h3>
 
         {/* Salaries */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -449,11 +493,13 @@ export const CashFlowTab = ({ config, data, onUpdateConfig, onUpdateData }: Cash
               Aggiungi
             </button>
           </div>
-          <p className="text-xs text-gray-400 mt-2">
-            Non trovi la categoria? Vai al tab <span className="text-blue-400 font-semibold">Categorie</span> per crearne una nuova.
-          </p>
+            <p className="text-xs text-gray-400 mt-2">
+              Non trovi la categoria? Vai al tab <span className="text-blue-400 font-semibold">Categorie</span> per crearne una nuova.
+            </p>
+          </div>
         </div>
-      </div>
+      </>
+      )}
     </div>
   )
 }

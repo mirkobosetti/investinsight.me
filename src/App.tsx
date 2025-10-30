@@ -2,20 +2,14 @@ import { useState } from 'react';
 import { CashFlowTab } from './components/CashFlowTab';
 import { InvestmentsTab } from './components/InvestmentsTab';
 import { CategoriesTab } from './components/CategoriesTab';
-import type { TabType, CashFlowData, CashFlowConfig, InvestmentConfig } from './types';
-import { generateMockCashFlowData } from './utils';
+import type { TabType, CashFlowData, InvestmentConfig } from './types';
 
 function App() {
   const [activeTab, setActiveTab] = useState<TabType>('cashflow');
-  const [cashFlowConfig, setCashFlowConfig] = useState<CashFlowConfig>({
-    initialCapital: 8500,
-    baseNetSalary: 2400,
-    baseGrossSalary: 3300,
-    monthsToGenerate: 12,
+  const [cashFlowData, setCashFlowData] = useState<CashFlowData>({
+    initialCapital: 0,
+    months: []
   });
-  const [cashFlowData, setCashFlowData] = useState<CashFlowData>(
-    generateMockCashFlowData(cashFlowConfig)
-  );
   const [investmentConfig, setInvestmentConfig] = useState<InvestmentConfig>({
     initialBalance: 0,
     monthlyInvestment: 200,
@@ -69,9 +63,7 @@ function App() {
       <main className="container mx-auto px-4 py-8">
         {activeTab === 'cashflow' && (
           <CashFlowTab
-            config={cashFlowConfig}
             data={cashFlowData}
-            onUpdateConfig={setCashFlowConfig}
             onUpdateData={setCashFlowData}
           />
         )}
