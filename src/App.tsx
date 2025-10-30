@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { Toaster } from './components/ui/toaster';
 
 function App() {
   // Set basename based on environment
@@ -13,6 +14,7 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter basename={basename}>
+        <Toaster />
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Dashboard />} />
