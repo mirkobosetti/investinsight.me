@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getUserProfile, updateUserProfile, type UserProfile } from '../services/firestore.service';
+import { Navbar } from '@/components/Navbar';
 
 export const ProfilePage = () => {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [initialCapital, setInitialCapital] = useState(0);
@@ -58,39 +59,18 @@ export const ProfilePage = () => {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      navigate('/login');
-    } catch (err) {
-      console.error('Logout error:', err);
-    }
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-white text-xl">Caricamento...</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-xl">Caricamento...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      {/* Header */}
-      <header className="bg-gray-800 border-b border-gray-700">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold">Profilo</h1>
-            <button
-              onClick={() => navigate('/')}
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
-            >
-              ← Dashboard
-            </button>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen">
+      {/* Navbar */}
+      <Navbar />
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 max-w-2xl">
@@ -177,16 +157,6 @@ export const ProfilePage = () => {
             </div>
           </div>
 
-          {/* Actions Card */}
-          <div className="bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-2xl font-bold mb-4">Azioni Account</h2>
-            <button
-              onClick={handleLogout}
-              className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
-            >
-              Esci
-            </button>
-          </div>
         </div>
       </main>
     </div>
