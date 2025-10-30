@@ -4,21 +4,17 @@ import { CashFlowTab } from '../components/CashFlowTab';
 import { InvestmentsTab } from '../components/InvestmentsTab';
 import { CategoriesTab } from '../components/CategoriesTab';
 import { useAuth } from '../contexts/AuthContext';
-import type { TabType, CashFlowData, InvestmentConfig } from '../types';
+import { useCashFlowData } from '../hooks/useCashFlowData';
+import { useInvestmentConfig } from '../hooks/useInvestmentConfig';
+import type { TabType } from '../types';
 
 export const Dashboard = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('cashflow');
-  const [cashFlowData, setCashFlowData] = useState<CashFlowData>({
-    initialCapital: 0,
-    months: []
-  });
-  const [investmentConfig, setInvestmentConfig] = useState<InvestmentConfig>({
-    initialBalance: 0,
-    monthlyInvestment: 200,
-    annualROI: 7,
-    yearsToSimulate: 30,
-  });
+
+  // Use Firestore hooks for logged users
+  const { cashFlowData, loading: cashFlowLoading, addMonth, updateMonth, deleteMonth } = useCashFlowData();
+  const { config: investmentConfig, loading: investmentLoading, updateConfig } = useInvestmentConfig();
 
   const tabs: { id: TabType; label: string; icon: string }[] = [
     { id: 'cashflow', label: 'Cash Flow', icon: '💰' },
@@ -100,13 +96,23 @@ export const Dashboard = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         {activeTab === 'cashflow' && (
-          <CashFlowTab
-            data={cashFlowData}
-            onUpdateData={setCashFlowData}
-          />
+          cashFlowLoading ? (
+            <div className="text-center py-12">Caricamento dati...</div>
+          ) : (
+            <CashFlowTab
+              cashFlowData={cashFlowData}
+              onAddMonth={addMonth}
+              onUpdateMonth={updateMonth}
+              onDeleteMonth={deleteMonth}
+            />
+          )
         )}
         {activeTab === 'investments' && (
-          <InvestmentsTab config={investmentConfig} onUpdateConfig={setInvestmentConfig} />
+          investmentLoading ? (
+            <div className="text-center py-12">Caricamento configurazione...</div>
+          ) : (
+            <InvestmentsTab config={investmentConfig} onUpdateConfig={updateConfig} />
+          )
         )}
         {activeTab === 'categories' && <CategoriesTab />}
       </main>

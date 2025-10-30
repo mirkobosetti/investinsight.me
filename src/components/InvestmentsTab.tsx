@@ -15,11 +15,12 @@ import { calculateInvestmentProjections, formatCurrency, formatPercentage } from
 
 interface InvestmentsTabProps {
   config: InvestmentConfig;
-  onUpdateConfig: (config: InvestmentConfig) => void;
+  onUpdateConfig: (config: InvestmentConfig) => Promise<void>;
 }
 
 export const InvestmentsTab = ({ config, onUpdateConfig }: InvestmentsTabProps) => {
   const [localConfig, setLocalConfig] = useState(config);
+  const [isSaving, setIsSaving] = useState(false);
 
   const projections = calculateInvestmentProjections(localConfig);
 
@@ -31,8 +32,15 @@ export const InvestmentsTab = ({ config, onUpdateConfig }: InvestmentsTabProps) 
     returns: month.returns,
   }));
 
-  const handleUpdateConfig = () => {
-    onUpdateConfig(localConfig);
+  const handleUpdateConfig = async () => {
+    setIsSaving(true);
+    try {
+      await onUpdateConfig(localConfig);
+    } catch (error) {
+      console.error('Error updating investment config:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const finalMonth = projections[projections.length - 1];
@@ -105,9 +113,10 @@ export const InvestmentsTab = ({ config, onUpdateConfig }: InvestmentsTabProps) 
         </div>
         <button
           onClick={handleUpdateConfig}
-          className="mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+          disabled={isSaving}
+          className="mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors"
         >
-          Aggiorna Proiezione
+          {isSaving ? 'Salvataggio...' : 'Aggiorna Proiezione'}
         </button>
       </div>
 

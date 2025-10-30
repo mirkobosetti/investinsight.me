@@ -1,22 +1,19 @@
 import { useState } from 'react';
-import { useCategoryStore, type Category } from '../stores/categoryStore';
+import { useCategories } from '../hooks/useCategories';
 import { CATEGORY_COLORS } from '../utils';
+import type { Category } from '../services/firestore.service';
 
 export const CategoriesTab = () => {
-  const categories = useCategoryStore(state => state.categories);
-  const addCategory = useCategoryStore(state => state.addCategory);
-  const updateCategory = useCategoryStore(state => state.updateCategory);
-  const removeCategory = useCategoryStore(state => state.removeCategory);
-  const updateCategoryColor = useCategoryStore(state => state.updateCategoryColor);
+  const { categories, addCategory, updateCategoryName, updateCategoryColor, removeCategory } = useCategories();
 
   const [newCategoryName, setNewCategoryName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
 
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
     if (!newCategoryName.trim()) return;
 
-    const success = addCategory(newCategoryName);
+    const success = await addCategory(newCategoryName);
     if (!success) {
       alert('Una categoria con questo nome esiste già');
       return;
@@ -25,7 +22,7 @@ export const CategoriesTab = () => {
     setNewCategoryName('');
   };
 
-  const handleRemoveCategory = (categoryId: string) => {
+  const handleRemoveCategory = async (categoryId: string) => {
     const category = categories.find(cat => cat.id === categoryId);
 
     if (category?.isDefault) {
@@ -34,7 +31,7 @@ export const CategoriesTab = () => {
     }
 
     if (confirm(`Sei sicuro di voler eliminare la categoria "${category?.name}"?`)) {
-      removeCategory(categoryId);
+      await removeCategory(categoryId);
     }
   };
 
@@ -43,10 +40,10 @@ export const CategoriesTab = () => {
     setEditingName(category.name);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingName.trim() || !editingId) return;
 
-    const success = updateCategory(editingId, editingName);
+    const success = await updateCategoryName(editingId, editingName);
     if (!success) {
       alert('Una categoria con questo nome esiste già');
       return;

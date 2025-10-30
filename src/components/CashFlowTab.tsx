@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   ComposedChart,
   Bar,
@@ -12,20 +12,21 @@ import {
   ResponsiveContainer
 } from 'recharts'
 import type { CashFlowData, MonthData } from '../types'
-import { formatCurrency, generateId, calculateCumulativeCapital, sortMonthsChronologically, formatMonthDisplay, getFullMonthName } from '../utils'
-import { useCategoryStore } from '../stores/categoryStore'
+import { formatCurrency, generateId, sortMonthsChronologically, formatMonthDisplay, getFullMonthName } from '../utils'
+import { useCategories } from '../hooks/useCategories'
 
 interface CashFlowTabProps {
-  data: CashFlowData
-  onUpdateData: (data: CashFlowData) => void
+  cashFlowData: CashFlowData
+  onAddMonth: (month: MonthData) => Promise<void>
+  onUpdateMonth: (monthId: string, updates: Partial<MonthData>) => Promise<void>
+  onDeleteMonth: (monthId: string) => Promise<void>
 }
 
-export const CashFlowTab = ({ data, onUpdateData }: CashFlowTabProps) => {
-  const categories = useCategoryStore(state => state.categories)
-  const getCategoryByName = useCategoryStore(state => state.getCategoryByName)
+export const CashFlowTab = ({ cashFlowData, onAddMonth, onUpdateMonth, onDeleteMonth }: CashFlowTabProps) => {
+  const { categories, getCategoryByName } = useCategories()
 
   const [selectedMonthId, setSelectedMonthId] = useState<string | null>(
-    data.months.length > 0 ? data.months[0].id : null
+    cashFlowData.months.length > 0 ? cashFlowData.months[0].id : null
   )
   const [newExpenseCategory, setNewExpenseCategory] = useState('')
   const [newExpenseAmount, setNewExpenseAmount] = useState('')
@@ -36,8 +37,15 @@ export const CashFlowTab = ({ data, onUpdateData }: CashFlowTabProps) => {
   const [newMonthNetSalary, setNewMonthNetSalary] = useState(0)
   const [newMonthGrossSalary, setNewMonthGrossSalary] = useState(0)
 
+  // Update selected month when data changes
+  useEffect(() => {
+    if (cashFlowData.months.length > 0 && !selectedMonthId) {
+      setSelectedMonthId(cashFlowData.months[0].id)
+    }
+  }, [cashFlowData.months, selectedMonthId])
+
   // Sort months chronologically for display
-  const sortedMonths = sortMonthsChronologically(data.months)
+  const sortedMonths = sortMonthsChronologically(cashFlowData.months)
   const selectedMonth = sortedMonths.find(m => m.id === selectedMonthId) || sortedMonths[0]
   const selectedMonthIndex = sortedMonths.findIndex(m => m.id === selectedMonthId)
 
@@ -61,15 +69,15 @@ export const CashFlowTab = ({ data, onUpdateData }: CashFlowTabProps) => {
 
   // Get all unique categories from the data
   const allCategoriesInData = Array.from(
-    new Set(data.months.flatMap((m) => m.expenses.map((e) => e.category)))
+    new Set(cashFlowData.months.flatMap((m) => m.expenses.map((e) => e.category)))
   )
 
   // Map them to their colors from the store
   const categoryColorMap = new Map(categories.map(cat => [cat.name, cat.color]))
 
-  const handleAddMonth = () => {
+  const handleAddMonth = async () => {
     // Check if month already exists
-    const monthExists = data.months.some(
+    const monthExists = cashFlowData.months.some(
       m => m.month === newMonthMonth && m.year === newMonthYear
     )
 
@@ -88,9 +96,7 @@ export const CashFlowTab = ({ data, onUpdateData }: CashFlowTabProps) => {
       cumulativeCapital: 0
     }
 
-    const updatedMonths = [...data.months, newMonth]
-    const recalculated = calculateCumulativeCapital(updatedMonths, data.initialCapital)
-    onUpdateData({ ...data, months: recalculated })
+    await onAddMonth(newMonth)
 
     // Select the newly added month
     setSelectedMonthId(newMonth.id)
@@ -100,7 +106,7 @@ export const CashFlowTab = ({ data, onUpdateData }: CashFlowTabProps) => {
     setNewMonthGrossSalary(0)
   }
 
-  const handleAddExpense = () => {
+  const handleAddExpense = async () => {
     if (!selectedMonth || !newExpenseCategory || !newExpenseAmount) return
 
     const amount = parseFloat(newExpenseAmount)
@@ -113,96 +119,57 @@ export const CashFlowTab = ({ data, onUpdateData }: CashFlowTabProps) => {
       return
     }
 
-    const updatedMonths = data.months.map(month => {
-      if (month.id === selectedMonth.id) {
-        return {
-          ...month,
-          expenses: [
-            ...month.expenses,
-            {
-              id: generateId(),
-              category: category.name,
-              amount,
-              color: category.color
-            }
-          ]
-        }
-      }
-      return month
-    })
+    const newExpense = {
+      id: generateId(),
+      category: category.name,
+      amount,
+      color: category.color
+    }
 
-    const recalculated = calculateCumulativeCapital(updatedMonths, data.initialCapital)
-    onUpdateData({ ...data, months: recalculated })
+    await onUpdateMonth(selectedMonth.id, {
+      expenses: [...selectedMonth.expenses, newExpense]
+    })
 
     setNewExpenseCategory('')
     setNewExpenseAmount('')
   }
 
-  const handleRemoveExpense = (expenseId: string) => {
+  const handleRemoveExpense = async (expenseId: string) => {
     if (!selectedMonth) return
 
-    const updatedMonths = data.months.map(month => {
-      if (month.id === selectedMonth.id) {
-        return {
-          ...month,
-          expenses: month.expenses.filter((e) => e.id !== expenseId)
-        }
-      }
-      return month
-    })
-
-    const recalculated = calculateCumulativeCapital(updatedMonths, data.initialCapital)
-    onUpdateData({ ...data, months: recalculated })
+    const updatedExpenses = selectedMonth.expenses.filter((e) => e.id !== expenseId)
+    await onUpdateMonth(selectedMonth.id, { expenses: updatedExpenses })
   }
 
-  const handleUpdateExpense = (expenseId: string, amount: number) => {
+  const handleUpdateExpense = async (expenseId: string, amount: number) => {
     if (!selectedMonth) return
 
-    const updatedMonths = data.months.map(month => {
-      if (month.id === selectedMonth.id) {
-        return {
-          ...month,
-          expenses: month.expenses.map(exp =>
-            exp.id === expenseId ? { ...exp, amount } : exp
-          )
-        }
-      }
-      return month
-    })
-
-    const recalculated = calculateCumulativeCapital(updatedMonths, data.initialCapital)
-    onUpdateData({ ...data, months: recalculated })
+    const updatedExpenses = selectedMonth.expenses.map(exp =>
+      exp.id === expenseId ? { ...exp, amount } : exp
+    )
+    await onUpdateMonth(selectedMonth.id, { expenses: updatedExpenses })
   }
 
-  const handleUpdateSalary = (type: 'net' | 'gross', value: number) => {
+  const handleUpdateSalary = async (type: 'net' | 'gross', value: number) => {
     if (!selectedMonth) return
 
-    const updatedMonths = data.months.map(month => {
-      if (month.id === selectedMonth.id) {
-        return {
-          ...month,
-          netSalary: type === 'net' ? value : month.netSalary,
-          grossSalary: type === 'gross' ? value : month.grossSalary
-        }
-      }
-      return month
-    })
+    const updates: Partial<MonthData> = type === 'net'
+      ? { netSalary: value }
+      : { grossSalary: value }
 
-    const recalculated = calculateCumulativeCapital(updatedMonths, data.initialCapital)
-    onUpdateData({ ...data, months: recalculated })
+    await onUpdateMonth(selectedMonth.id, updates)
   }
 
-  const handleRemoveMonth = () => {
-    if (!selectedMonth || data.months.length === 0) return
+  const handleRemoveMonth = async () => {
+    if (!selectedMonth || cashFlowData.months.length === 0) return
 
     if (confirm(`Sei sicuro di voler eliminare ${formatMonthDisplay(selectedMonth.month, selectedMonth.year)}?`)) {
-      const updatedMonths = data.months.filter(m => m.id !== selectedMonth.id)
-      const recalculated = calculateCumulativeCapital(updatedMonths, data.initialCapital)
-      onUpdateData({ ...data, months: recalculated })
+      await onDeleteMonth(selectedMonth.id)
 
       // Select first month or null if no months left
-      if (updatedMonths.length > 0) {
-        setSelectedMonthId(updatedMonths[0].id)
+      const remaining = cashFlowData.months.filter(m => m.id !== selectedMonth.id)
+      if (remaining.length > 0) {
+        setSelectedMonthId(remaining[0].id)
       } else {
         setSelectedMonthId(null)
       }
@@ -332,7 +299,7 @@ export const CashFlowTab = ({ data, onUpdateData }: CashFlowTabProps) => {
       </div>
 
       {/* Month Selector */}
-      {data.months.length > 0 ? (
+      {cashFlowData.months.length > 0 ? (
         <div className="flex items-center justify-between gap-4 bg-gray-800 p-4 rounded-lg">
           <div className="flex items-center gap-4">
             <button
