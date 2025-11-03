@@ -16,6 +16,15 @@ import type { CashFlowData, MonthData } from '../types'
 import { formatCurrency, generateId, sortMonthsChronologically, formatMonthDisplay, getFullMonthName } from '../utils'
 import { useCategories } from '../hooks/useCategories'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 interface CashFlowTabProps {
   cashFlowData: CashFlowData
@@ -187,47 +196,51 @@ export const CashFlowTab = ({ cashFlowData, onAddMonth, onUpdateMonth, onDeleteM
       <div className="glass-card p-6">
         <h2 className="text-2xl font-bold mb-4">Aggiungi Nuovo Mese</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Mese</label>
-            <select
-              value={newMonthMonth}
-              onChange={(e) => setNewMonthMonth(parseInt(e.target.value))}
-              className="w-full"
+          <div className="space-y-2">
+            <Label htmlFor="month-select">Mese</Label>
+            <Select
+              value={newMonthMonth.toString()}
+              onValueChange={(value: string) => setNewMonthMonth(parseInt(value))}
             >
-              {Array.from({ length: 12 }, (_, i) => (
-                <option key={i} value={i}>
-                  {getFullMonthName(i)}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="month-select">
+                <SelectValue placeholder="Seleziona mese" />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 12 }, (_, i) => (
+                  <SelectItem key={i} value={i.toString()}>
+                    {getFullMonthName(i)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Anno</label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="year-input">Anno</Label>
+            <Input
+              id="year-input"
               type="number"
               value={newMonthYear}
               onChange={(e) => setNewMonthYear(parseInt(e.target.value) || new Date().getFullYear())}
               min="1900"
               max="2100"
-              className="w-full"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Stipendio Netto (€)</label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="net-salary-input">Stipendio Netto (€)</Label>
+            <Input
+              id="net-salary-input"
               type="number"
               value={newMonthNetSalary}
               onChange={(e) => setNewMonthNetSalary(parseFloat(e.target.value) || 0)}
-              className="w-full"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Stipendio Lordo (€)</label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="gross-salary-input">Stipendio Lordo (€)</Label>
+            <Input
+              id="gross-salary-input"
               type="number"
               value={newMonthGrossSalary}
               onChange={(e) => setNewMonthGrossSalary(parseFloat(e.target.value) || 0)}
-              className="w-full"
             />
           </div>
           <div className="flex items-end">
