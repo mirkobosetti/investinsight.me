@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Plus } from 'lucide-react'
 import {
   ComposedChart,
   Bar,
@@ -14,6 +15,7 @@ import {
 import type { CashFlowData, MonthData } from '../types'
 import { formatCurrency, generateId, sortMonthsChronologically, formatMonthDisplay, getFullMonthName } from '../utils'
 import { useCategories } from '../hooks/useCategories'
+import { Button } from '@/components/ui/button'
 
 interface CashFlowTabProps {
   cashFlowData: CashFlowData
@@ -182,7 +184,7 @@ export const CashFlowTab = ({ cashFlowData, onAddMonth, onUpdateMonth, onDeleteM
   return (
     <div className="space-y-6">
       {/* Add New Month Form */}
-      <div className="bg-gray-800 p-6 rounded-lg">
+      <div className="glass-card p-6">
         <h2 className="text-2xl font-bold mb-4">Aggiungi Nuovo Mese</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
@@ -190,7 +192,7 @@ export const CashFlowTab = ({ cashFlowData, onAddMonth, onUpdateMonth, onDeleteM
             <select
               value={newMonthMonth}
               onChange={(e) => setNewMonthMonth(parseInt(e.target.value))}
-              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full"
             >
               {Array.from({ length: 12 }, (_, i) => (
                 <option key={i} value={i}>
@@ -207,7 +209,7 @@ export const CashFlowTab = ({ cashFlowData, onAddMonth, onUpdateMonth, onDeleteM
               onChange={(e) => setNewMonthYear(parseInt(e.target.value) || new Date().getFullYear())}
               min="1900"
               max="2100"
-              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full"
             />
           </div>
           <div>
@@ -216,7 +218,7 @@ export const CashFlowTab = ({ cashFlowData, onAddMonth, onUpdateMonth, onDeleteM
               type="number"
               value={newMonthNetSalary}
               onChange={(e) => setNewMonthNetSalary(parseFloat(e.target.value) || 0)}
-              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full"
             />
           </div>
           <div>
@@ -225,22 +227,24 @@ export const CashFlowTab = ({ cashFlowData, onAddMonth, onUpdateMonth, onDeleteM
               type="number"
               value={newMonthGrossSalary}
               onChange={(e) => setNewMonthGrossSalary(parseFloat(e.target.value) || 0)}
-              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full"
             />
           </div>
           <div className="flex items-end">
-            <button
+            <Button
               onClick={handleAddMonth}
-              className="w-full px-6 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+              className="w-full"
+              variant="accent"
             >
+              <Plus className="h-4 w-4 mr-2" />
               Aggiungi Mese
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
       {/* Chart */}
-      <div className="bg-gray-800 p-6 rounded-lg">
+      <div className="glass-card p-6">
         <h2 className="text-2xl font-bold mb-4">Andamento Capitale</h2>
         <ResponsiveContainer width="100%" height={500}>
           <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
@@ -300,7 +304,7 @@ export const CashFlowTab = ({ cashFlowData, onAddMonth, onUpdateMonth, onDeleteM
 
       {/* Month Selector */}
       {cashFlowData.months.length > 0 ? (
-        <div className="flex items-center justify-between gap-4 bg-gray-800 p-4 rounded-lg">
+        <div className="flex items-center justify-between gap-4 glass-card p-4">
           <div className="flex items-center gap-4">
             <button
               onClick={() => {
@@ -308,14 +312,14 @@ export const CashFlowTab = ({ cashFlowData, onAddMonth, onUpdateMonth, onDeleteM
                 setSelectedMonthId(sortedMonths[prevIndex].id)
               }}
               disabled={selectedMonthIndex === 0}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors"
+              className="px-5 py-2.5"
             >
               ← Prec
             </button>
             <select
               value={selectedMonthId || ''}
               onChange={(e) => setSelectedMonthId(e.target.value)}
-              className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xl font-bold"
+              className="px-4 py-2.5 glass-card border-primary/20 text-xl font-bold"
             >
               {sortedMonths.map((month) => (
                 <option key={month.id} value={month.id}>
@@ -329,7 +333,7 @@ export const CashFlowTab = ({ cashFlowData, onAddMonth, onUpdateMonth, onDeleteM
                 setSelectedMonthId(sortedMonths[nextIndex].id)
               }}
               disabled={selectedMonthIndex === sortedMonths.length - 1}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors"
+              className="px-5 py-2.5"
             >
               Succ →
             </button>
@@ -337,14 +341,14 @@ export const CashFlowTab = ({ cashFlowData, onAddMonth, onUpdateMonth, onDeleteM
           <div className="flex gap-2">
             <button
               onClick={handleRemoveMonth}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+              className="px-5 py-2.5"
             >
               Elimina Mese
             </button>
           </div>
         </div>
       ) : (
-        <div className="bg-gray-800 p-8 rounded-lg text-center">
+        <div className="glass-card p-8 text-center">
           <p className="text-gray-400 mb-4">Nessun mese presente. Aggiungi il tuo primo mese sopra!</p>
         </div>
       )}
@@ -354,11 +358,11 @@ export const CashFlowTab = ({ cashFlowData, onAddMonth, onUpdateMonth, onDeleteM
         <>
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gray-800 p-4 rounded-lg">
+            <div className="glass-card p-4">
               <div className="text-sm text-gray-400">Spese Totali Mese</div>
               <div className="text-2xl font-bold text-red-500">{formatCurrency(totalExpenses)}</div>
             </div>
-            <div className="bg-gray-800 p-4 rounded-lg">
+            <div className="glass-card p-4">
               <div className="text-sm text-gray-400">Bilancio Mensile</div>
               <div
                 className={`text-2xl font-bold ${
@@ -368,7 +372,7 @@ export const CashFlowTab = ({ cashFlowData, onAddMonth, onUpdateMonth, onDeleteM
                 {formatCurrency(monthlyBalance)}
               </div>
             </div>
-            <div className="bg-gray-800 p-4 rounded-lg">
+            <div className="glass-card p-4">
               <div className="text-sm text-gray-400">Capitale Cumulativo</div>
               <div className="text-2xl font-bold text-green-500">
                 {formatCurrency(selectedMonth.cumulativeCapital)}
@@ -377,7 +381,7 @@ export const CashFlowTab = ({ cashFlowData, onAddMonth, onUpdateMonth, onDeleteM
           </div>
 
           {/* Edit Form */}
-          <div className="bg-gray-800 p-6 rounded-lg space-y-6">
+          <div className="glass-card p-6 space-y-6">
             <h3 className="text-xl font-bold">Modifica Dati Mese</h3>
 
         {/* Salaries */}
@@ -388,7 +392,7 @@ export const CashFlowTab = ({ cashFlowData, onAddMonth, onUpdateMonth, onDeleteM
               type="number"
               value={selectedMonth.netSalary}
               onChange={(e) => handleUpdateSalary('net', parseFloat(e.target.value) || 0)}
-              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full"
             />
           </div>
           <div>
@@ -397,7 +401,7 @@ export const CashFlowTab = ({ cashFlowData, onAddMonth, onUpdateMonth, onDeleteM
               type="number"
               value={selectedMonth.grossSalary}
               onChange={(e) => handleUpdateSalary('gross', parseFloat(e.target.value) || 0)}
-              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full"
             />
           </div>
         </div>
@@ -407,7 +411,7 @@ export const CashFlowTab = ({ cashFlowData, onAddMonth, onUpdateMonth, onDeleteM
           <h4 className="text-lg font-semibold mb-3">Spese</h4>
           <div className="space-y-2">
             {selectedMonth.expenses.map((expense) => (
-              <div key={expense.id} className="flex items-center gap-4 bg-gray-700 p-3 rounded-lg">
+              <div key={expense.id} className="flex items-center gap-4 glass-card p-3 border border-primary/10">
                 <div className="w-4 h-4 rounded" style={{ backgroundColor: expense.color }}></div>
                 <div className="flex-1">
                   <div className="font-medium">{expense.category}</div>
@@ -436,7 +440,7 @@ export const CashFlowTab = ({ cashFlowData, onAddMonth, onUpdateMonth, onDeleteM
             <select
               value={newExpenseCategory}
               onChange={(e) => setNewExpenseCategory(e.target.value)}
-              className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-4 py-2.5 glass-card border-primary/20"
             >
               <option value="">Seleziona una categoria...</option>
               {categories.map((cat) => (
@@ -450,7 +454,7 @@ export const CashFlowTab = ({ cashFlowData, onAddMonth, onUpdateMonth, onDeleteM
               placeholder="Importo (€)"
               value={newExpenseAmount}
               onChange={(e) => setNewExpenseAmount(e.target.value)}
-              className="w-40 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-40 px-4 py-2.5 glass-card border-primary/20"
             />
             <button
               onClick={handleAddExpense}

@@ -42,4 +42,4 @@ export interface InvestmentData {
   projections: InvestmentMonth[];
 }
 
-export type TabType = 'cashflow' | 'investments' | 'categories';
+export type TabType = 'dashboard' | 'cashflow' | 'investments' | 'categories';

@@ -9,6 +9,7 @@ import {
   FolderOpen,
   Menu,
   X,
+  LayoutDashboard,
   type LucideIcon
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -36,6 +37,7 @@ export const Navbar = ({ activeTab, onTabChange, showTabs = false }: NavbarProps
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const tabs: { id: TabType; label: string; icon: LucideIcon }[] = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'cashflow', label: 'Cash Flow', icon: Wallet },
     { id: 'investments', label: 'Investimenti', icon: TrendingUpIcon },
     { id: 'categories', label: 'Categorie', icon: FolderOpen }
